@@ -1,0 +1,8 @@
+{
+  "name": "Sovereign Slate",
+  "description": "ابزار اختصاصی آرشیو و مدیریت پروژه‌های شخصی، اسناد طراحی فیگما، کدهای ری‌اکت و مشخصات فنی با پشتیبانی دوزبانه.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
