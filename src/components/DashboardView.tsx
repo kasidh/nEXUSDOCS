@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { MetricCard } from './MetricCard';
 import { ProjectCard } from './ProjectCard';
 import { ProjectStatus } from '../types';
-import { Search, Filter, Plus, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Search, Filter, Plus, Upload, SlidersHorizontal, Sparkles } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const { metrics, projects, language, openNewModal } = useApp();
@@ -105,8 +105,8 @@ export const DashboardView: React.FC = () => {
               onClick={() => openNewModal('project')}
               className="h-9 px-3.5 text-xs font-semibold text-white bg-[#4F46E5] hover:bg-[#6366F1] rounded-lg transition-all flex items-center gap-1.5 shrink-0 shadow-[0_2px_8px_rgba(79,70,229,0.3)]"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{language === 'fa' ? 'پروژه جدید' : 'New Project'}</span>
+              <Upload className="w-3.5 h-3.5" />
+              <span>{language === 'fa' ? 'بارگذاری پروژه از فایل' : 'Upload Project File'}</span>
             </button>
           </div>
         </div>
@@ -135,8 +135,8 @@ export const DashboardView: React.FC = () => {
             onClick={() => openNewModal('project')}
             className="px-3 py-1.5 text-xs font-medium text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-500/30 rounded-lg transition-colors shrink-0 self-start md:self-center flex items-center gap-1.5"
           >
-            <Plus className="w-3 h-3" />
-            <span>{language === 'fa' ? 'ثبت مشخصات دستی' : 'Manual Entry'}</span>
+            <Upload className="w-3 h-3" />
+            <span>{language === 'fa' ? 'بارگذاری فایل ZIP پروژه' : 'Upload Project ZIP'}</span>
           </button>
         </div>
 

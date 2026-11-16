@@ -8,6 +8,12 @@ export type ProjectStatus = 'active' | 'in_progress' | 'archived';
 
 export type FileFormat = 'figma' | 'pdf' | 'tsx' | 'openapi';
 
+export interface UploadedArchive {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -26,6 +32,7 @@ export interface Project {
   demoUrl?: string;
   githubUrl?: string;
   figmaUrl?: string;
+  uploadedArchive?: UploadedArchive;
   formats: FileFormat[];
   techStack: string[];
   metrics: {
@@ -42,6 +49,7 @@ export interface Project {
 export interface DocumentItem {
   id: string;
   projectId?: string;
+  uploadedFile?: UploadedArchive;
   title: string;
   titleFa: string;
   category: string;

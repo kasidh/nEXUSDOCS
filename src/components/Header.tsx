@@ -5,6 +5,7 @@ import {
   Globe,
   Bell,
   Plus,
+  Upload,
   Command,
   ChevronRight,
   ShieldCheck,
@@ -179,15 +180,15 @@ export const Header: React.FC = () => {
           onClick={() => openNewModal(screen === 'repository' ? 'document' : 'project')}
           className="h-10 px-4 text-xs font-semibold text-white bg-[#4F46E5] hover:bg-[#6366F1] active:scale-95 rounded-lg transition-all flex items-center gap-1.5 shadow-[0_4px_12px_rgba(79,70,229,0.35)] shrink-0"
         >
-          <Plus className="w-4 h-4" />
+          {screen === 'repository' ? <Plus className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
           <span>
             {screen === 'repository'
               ? language === 'fa'
                 ? 'بارگذاری سورس / فایل'
                 : 'Upload Artifact'
               : language === 'fa'
-              ? 'افزودن پروژه جدید'
-              : 'Add Project'}
+              ? 'بارگذاری پروژه از فایل'
+              : 'Upload Project File'}
           </span>
         </button>
 

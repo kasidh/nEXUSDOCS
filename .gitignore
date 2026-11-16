@@ -2,6 +2,7 @@ node_modules/
 build/
 dist/
 coverage/
+.nexusdocs-data/
 .DS_Store
 *.log
 .env*

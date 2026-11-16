@@ -170,24 +170,50 @@ export const InspectorDrawer: React.FC = () => {
                       <div className="text-[11px] text-slate-400">{doc.size}</div>
                     </div>
                   </div>
-                  <button
-                    onClick={() =>
-                      showToast(
-                        language === 'fa'
-                          ? 'دریافت نسخه اصلی فایل آغاز شد'
-                          : 'Asset download stream established'
-                      )
-                    }
-                    className="p-2 text-cyan-400 hover:bg-white/5 rounded transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
+                  {doc.uploadedFile ? (
+                    <a
+                      href={doc.uploadedFile.url}
+                      download={doc.uploadedFile.name}
+                      className="p-2 text-cyan-400 hover:bg-white/5 rounded transition-colors"
+                      aria-label={language === 'fa' ? 'دریافت فایل' : 'Download file'}
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        showToast(
+                          language === 'fa'
+                            ? 'نسخه اصلی این سند در دسترس نیست'
+                            : 'The original file is not available'
+                        )
+                      }
+                      className="p-2 text-cyan-400 hover:bg-white/5 rounded transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               )}
 
               {/* Project Telemetry Metrics */}
               {project && (
                 <div className="space-y-2">
+                  {project.uploadedArchive && (
+                    <a
+                      href={project.uploadedArchive.url}
+                      download={project.uploadedArchive.name}
+                      className="w-full flex items-center gap-3 rounded-lg border border-white/10 bg-[#0F172A] p-3 text-start hover:border-cyan-400/40 transition-colors"
+                    >
+                      <Download className="h-4 w-4 shrink-0 text-cyan-400" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium text-slate-200">{project.uploadedArchive.name}</span>
+                        <span className="block text-[11px] text-slate-400">
+                          {language === 'fa' ? 'دریافت فایل پروژه' : 'Download project archive'}
+                        </span>
+                      </span>
+                    </a>
+                  )}
                   <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wide">
                     {language === 'fa' ? 'شاخص‌های پروژه' : 'Project Metrics'}
                   </div>

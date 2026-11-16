@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   Language,
   FontFamily,
@@ -113,6 +113,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [documents, setDocuments] = useState<DocumentItem[]>(INITIAL_DOCUMENTS);
+  const [isLocalStateReady, setIsLocalStateReady] = useState(false);
+  const localSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const [metrics] = useState<MetricWidget[]>(INITIAL_METRICS);
   const [apiEndpoints] = useState<ApiEndpoint[]>(INITIAL_API_ENDPOINTS);
 
@@ -172,6 +174,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setToastMessage(prev => (prev === msg ? null : prev));
     }, 3200);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLocalState = async () => {
+      try {
+        const response = await fetch('/api/state');
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not load local data.');
+
+        if (result.state) {
+          if (!Array.isArray(result.state.projects) || !Array.isArray(result.state.documents)) {
+            throw new Error('Local data has an invalid format.');
+          }
+          if (cancelled) return;
+          setProjects(result.state.projects);
+          setDocuments(result.state.documents);
+        } else {
+          const saveResponse = await fetch('/api/state', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projects: INITIAL_PROJECTS, documents: INITIAL_DOCUMENTS }),
+          });
+          const saveResult = await saveResponse.json();
+          if (!saveResponse.ok) throw new Error(saveResult.error || 'Could not initialize local data.');
+        }
+
+        if (!cancelled) setIsLocalStateReady(true);
+      } catch (error) {
+        console.error('Local data initialization failed:', error);
+        if (!cancelled) {
+          showToast(language === 'fa' ? 'بارگذاری یا ذخیره‌سازی اطلاعات ناموفق بود.' : 'Application data could not be loaded or saved.');
+        }
+      }
+    };
+
+    void loadLocalState();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLocalStateReady) return;
+
+    localSaveQueue.current = localSaveQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const response = await fetch('/api/state', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projects, documents }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not save local data.');
+      })
+      .catch(error => {
+        console.error('Local data could not be saved:', error);
+        showToast(language === 'fa' ? 'ذخیره‌سازی اطلاعات ناموفق بود.' : 'Could not save application data.');
+      });
+  }, [projects, documents, isLocalStateReady]);
 
   const addProject = (p: Omit<Project, 'id' | 'updatedAt' | 'updatedAtFa'>) => {
     const newProj: Project = {

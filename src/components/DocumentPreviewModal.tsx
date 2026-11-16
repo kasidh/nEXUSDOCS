@@ -140,13 +140,24 @@ export const DocumentPreviewModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownload}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#4F46E5] hover:bg-[#6366F1] rounded-lg transition-all flex items-center gap-1.5 shadow-[0_2px_8px_rgba(79,70,229,0.3)]"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{language === 'fa' ? 'دانلود فایل اصلی' : 'Download Spec'}</span>
-            </button>
+            {previewDocument.uploadedFile ? (
+              <a
+                href={previewDocument.uploadedFile.url}
+                download={previewDocument.uploadedFile.name}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#4F46E5] hover:bg-[#6366F1] rounded-lg transition-all flex items-center gap-1.5 shadow-[0_2px_8px_rgba(79,70,229,0.3)]"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{language === 'fa' ? 'دانلود فایل اصلی' : 'Download Spec'}</span>
+              </a>
+            ) : (
+              <button
+                onClick={handleDownload}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#4F46E5] hover:bg-[#6366F1] rounded-lg transition-all flex items-center gap-1.5 shadow-[0_2px_8px_rgba(79,70,229,0.3)]"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{language === 'fa' ? 'دانلود فایل اصلی' : 'Download Spec'}</span>
+              </button>
+            )}
             <button
               onClick={() => setPreviewDocument(null)}
               className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-[#1E293B] hover:bg-[#334155] rounded-lg transition-colors"
