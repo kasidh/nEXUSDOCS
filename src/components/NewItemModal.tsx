@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { FileFormat, UploadedArchive } from '../types';
+import { FileFormat, Project, UploadedArchive } from '../types';
 import { X, Upload, LoaderCircle } from 'lucide-react';
 
-interface ProjectAnalysisResult {
-  name: string;
-  description: string;
-  descriptionFa: string;
-  category: 'web-app' | 'mobile' | 'design-system' | 'backend' | 'ai-tool';
-  categoryFa: string;
-  techStack: string[];
+interface ProjectUploadResult {
   filesCount: number;
   uploadedArchive: UploadedArchive;
 }
+
+const projectCategories: Record<Project['category'], { en: string; fa: string }> = {
+  'web-app': { en: 'Web App', fa: 'وب‌اپلیکیشن' },
+  mobile: { en: 'Mobile', fa: 'موبایل' },
+  'design-system': { en: 'Design System', fa: 'سیستم طراحی' },
+  backend: { en: 'Backend', fa: 'بک‌اند' },
+  'ai-tool': { en: 'AI Tool', fa: 'ابزار هوش مصنوعی' },
+};
 
 interface DocumentAnalysisResult {
   title: string;
@@ -35,11 +37,16 @@ export const NewItemModal: React.FC = () => {
   } = useApp();
 
   // Project form state
+  const [projName, setProjName] = useState('');
   const [projNameFa, setProjNameFa] = useState('');
+  const [projDescription, setProjDescription] = useState('');
+  const [projDescriptionFa, setProjDescriptionFa] = useState('');
+  const [projCategory, setProjCategory] = useState<Project['category']>('backend');
+  const [projTechStack, setProjTechStack] = useState('');
   const [projVersion, setProjVersion] = useState('v1.0.0');
   const [projectFile, setProjectFile] = useState<File | null>(null);
-  const [isProjectAnalyzing, setIsProjectAnalyzing] = useState(false);
-  const [projectAnalysisError, setProjectAnalysisError] = useState('');
+  const [isProjectUploading, setIsProjectUploading] = useState(false);
+  const [projectUploadError, setProjectUploadError] = useState('');
 
   // Document form state
   const [docTitle, setDocTitle] = useState('');
@@ -54,20 +61,31 @@ export const NewItemModal: React.FC = () => {
 
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projNameFa.trim() || !projVersion.trim() || !projectFile) {
-      setProjectAnalysisError(language === 'fa' ? 'نام فارسی، نسخه و فایل ZIP را وارد کنید.' : 'Enter a Persian name, version, and ZIP archive.');
+    if (
+      !projName.trim() ||
+      !projNameFa.trim() ||
+      !projDescription.trim() ||
+      !projDescriptionFa.trim() ||
+      !projVersion.trim() ||
+      !projectFile
+    ) {
+      setProjectUploadError(
+        language === 'fa'
+          ? 'نام پروژه به دو زبان، توضیحات فارسی و انگلیسی، نسخه و فایل ZIP را وارد کنید.'
+          : 'Enter the project name and descriptions in both languages, a version, and a ZIP archive.'
+      );
       return;
     }
 
     if (projectFile.size > 30 * 1024 * 1024) {
-      setProjectAnalysisError(language === 'fa' ? 'حجم فایل ZIP نباید بیشتر از ۳۰ مگابایت باشد.' : 'The ZIP archive must be 30 MB or smaller.');
+      setProjectUploadError(language === 'fa' ? 'حجم فایل ZIP نباید بیشتر از ۳۰ مگابایت باشد.' : 'The ZIP archive must be 30 MB or smaller.');
       return;
     }
 
-    setProjectAnalysisError('');
-    setIsProjectAnalyzing(true);
+    setProjectUploadError('');
+    setIsProjectUploading(true);
     try {
-      const response = await fetch('/api/analyze-project', {
+      const response = await fetch('/api/upload-project', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/zip',
@@ -75,21 +93,21 @@ export const NewItemModal: React.FC = () => {
         },
         body: projectFile,
       });
-      const result = await response.json() as ProjectAnalysisResult & { error?: string };
-      if (!response.ok) throw new Error(result.error || 'Project analysis failed.');
+      const result = await response.json() as ProjectUploadResult & { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Project upload failed.');
 
       addProject({
-        name: result.name,
+        name: projName.trim(),
         nameFa: projNameFa.trim(),
-        description: result.description,
-        descriptionFa: result.descriptionFa,
-        category: result.category,
-        categoryFa: result.categoryFa,
+        description: projDescription.trim(),
+        descriptionFa: projDescriptionFa.trim(),
+        category: projCategory,
+        categoryFa: projectCategories[projCategory].fa,
         status: 'active',
         version: projVersion.trim(),
         year: '۱۴۰۵',
         formats: ['tsx', 'openapi'],
-        techStack: result.techStack,
+        techStack: projTechStack.split(/[,\n،]/).map(item => item.trim()).filter(Boolean).slice(0, 10),
         metrics: {
           filesCount: result.filesCount,
           completion: 100,
@@ -101,15 +119,15 @@ export const NewItemModal: React.FC = () => {
       });
       closeNewModal();
     } catch (error) {
-      setProjectAnalysisError(
+      setProjectUploadError(
         error instanceof Error
           ? error.message
           : language === 'fa'
-          ? 'تحلیل پروژه ناموفق بود.'
-          : 'Project analysis failed.'
+          ? 'بارگذاری پروژه ناموفق بود.'
+          : 'Project upload failed.'
       );
     } finally {
-      setIsProjectAnalyzing(false);
+      setIsProjectUploading(false);
     }
   };
 
@@ -203,36 +221,106 @@ export const NewItemModal: React.FC = () => {
 
         {/* Form Body */}
         {isProject ? (
-          <form onSubmit={handleProjectSubmit} className="p-5 space-y-4 text-xs">
+          <form onSubmit={handleProjectSubmit} className="max-h-[calc(90vh-4rem)] space-y-4 overflow-y-auto p-5 text-xs">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block font-medium text-slate-300">
+                  {language === 'fa' ? 'نام پروژه (انگلیسی)' : 'Project Name (English)'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={projName}
+                  onChange={e => setProjName(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 text-slate-200 placeholder-slate-500 focus:border-[#4F46E5] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-medium text-slate-300">
+                  {language === 'fa' ? 'نام پروژه (فارسی)' : 'Project Name (Persian)'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={projNameFa}
+                  onChange={e => setProjNameFa(e.target.value)}
+                  placeholder="مثال: سامانه مدیریت ناوگان"
+                  className="h-10 w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 text-slate-200 placeholder-slate-500 focus:border-[#4F46E5] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block font-medium text-slate-300">
+                  {language === 'fa' ? 'توضیحات پروژه (انگلیسی)' : 'Project Description (English)'}
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={projDescription}
+                  onChange={e => setProjDescription(e.target.value)}
+                  className="w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 py-2 text-slate-200 focus:border-[#4F46E5] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-medium text-slate-300">
+                  {language === 'fa' ? 'توضیحات پروژه (فارسی)' : 'Project Description (Persian)'}
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={projDescriptionFa}
+                  onChange={e => setProjDescriptionFa(e.target.value)}
+                  className="w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 py-2 text-slate-200 focus:border-[#4F46E5] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block font-medium text-slate-300">
+                  {language === 'fa' ? 'دسته‌بندی' : 'Category'}
+                </label>
+                <select
+                  value={projCategory}
+                  onChange={e => setProjCategory(e.target.value as Project['category'])}
+                  className="h-10 w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 text-slate-200 focus:border-[#4F46E5] focus:outline-none"
+                >
+                  {Object.entries(projectCategories).map(([value, labels]) => (
+                    <option key={value} value={value}>{language === 'fa' ? labels.fa : labels.en}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block font-medium text-slate-300">
+                  {language === 'fa' ? 'نسخه پروژه' : 'Project Version'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={projVersion}
+                  onChange={e => setProjVersion(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 font-mono text-slate-200 focus:border-[#4F46E5] focus:outline-none"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
-                {language === 'fa' ? 'نام پروژه (فارسی)' : 'Project Name (Persian)'}
+              <label className="mb-1 block font-medium text-slate-300">
+                {language === 'fa' ? 'فناوری‌ها (با ویرگول جدا کنید)' : 'Tech Stack (comma-separated)'}
               </label>
-              <input
-                type="text"
-                required
-                value={projNameFa}
-                onChange={e => setProjNameFa(e.target.value)}
-                placeholder="مثال: سامانه مدیریت ناوگان"
-                className="w-full h-10 px-3 bg-[#0A0F1D] border border-[#334155] rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+              <textarea
+                rows={2}
+                value={projTechStack}
+                onChange={e => setProjTechStack(e.target.value)}
+                placeholder="React, TypeScript, Node.js"
+                className="w-full rounded-lg border border-[#334155] bg-[#0A0F1D] px-3 py-2 text-slate-200 placeholder-slate-500 focus:border-[#4F46E5] focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">
-                {language === 'fa' ? 'نسخه پروژه' : 'Project Version'}
-              </label>
-              <input
-                type="text"
-                required
-                value={projVersion}
-                onChange={e => setProjVersion(e.target.value)}
-                className="w-full h-10 px-3 bg-[#0A0F1D] border border-[#334155] rounded-lg text-slate-200 font-mono focus:outline-none focus:border-[#4F46E5]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-300 font-medium mb-1">
+              <label className="mb-1 block font-medium text-slate-300">
                 {language === 'fa' ? 'فایل فشرده پروژه (ZIP)' : 'Project Archive (ZIP)'}
               </label>
               <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-lg border border-dashed border-[#475569] bg-[#0A0F1D] px-3 py-3 transition-colors hover:border-[#818CF8]">
@@ -255,7 +343,7 @@ export const NewItemModal: React.FC = () => {
                   accept=".zip,application/zip,application/x-zip-compressed"
                   onChange={event => {
                     setProjectFile(event.target.files?.[0] || null);
-                    setProjectAnalysisError('');
+                    setProjectUploadError('');
                   }}
                   className="sr-only"
                 />
@@ -264,32 +352,32 @@ export const NewItemModal: React.FC = () => {
 
             <p className="text-[11px] leading-relaxed text-slate-400">
               {language === 'fa'
-                ? 'README، فایل‌های پیکربندی و کدهای منتخب برای تحلیل به Gemini ارسال می‌شوند و فایل ZIP در فضای ذخیره‌سازی ابری نگهداری می‌شود.'
-                : 'README, configuration, and selected source files are sent to Gemini; the ZIP is stored in cloud storage.'}
+                ? 'توضیحات را دستی وارد کنید؛ برای ثبت پروژه هیچ درخواست هوش مصنوعی ارسال نمی‌شود. فایل ZIP ذخیره می‌شود؛ پیش از بارگذاری، فایل‌های محرمانه را حذف کنید.'
+                : 'Enter project details manually; no AI request is sent. The ZIP is stored as-is, so remove secrets before uploading.'}
             </p>
-            {projectAnalysisError && (
+            {projectUploadError && (
               <p role="alert" className="rounded-md border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-rose-300">
-                {projectAnalysisError}
+                {projectUploadError}
               </p>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+            <div className="flex items-center justify-end gap-2 border-t border-white/[0.08] pt-2">
               <button
                 type="button"
                 onClick={closeNewModal}
-                className="px-4 py-2 text-slate-300 hover:text-white bg-[#0F172A] rounded-lg transition-colors"
+                className="rounded-lg bg-[#0F172A] px-4 py-2 text-slate-300 transition-colors hover:text-white"
               >
                 {language === 'fa' ? 'انصراف' : 'Cancel'}
               </button>
               <button
                 type="submit"
-                disabled={isProjectAnalyzing}
-                className="px-4 py-2 font-semibold text-white bg-[#4F46E5] hover:bg-[#6366F1] rounded-lg shadow-[0_2px_10px_rgba(79,70,229,0.35)] transition-all"
+                disabled={isProjectUploading}
+                className="rounded-lg bg-[#4F46E5] px-4 py-2 font-semibold text-white shadow-[0_2px_10px_rgba(79,70,229,0.35)] transition-all hover:bg-[#6366F1] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isProjectAnalyzing && <LoaderCircle className="me-1.5 inline h-3.5 w-3.5 animate-spin" />}
-                {isProjectAnalyzing
-                  ? language === 'fa' ? 'در حال تحلیل فایل‌ها...' : 'Analyzing project...'
-                  : language === 'fa' ? 'تحلیل و ثبت پروژه' : 'Analyze & Register'}
+                {isProjectUploading && <LoaderCircle className="me-1.5 inline h-3.5 w-3.5 animate-spin" />}
+                {isProjectUploading
+                  ? language === 'fa' ? 'در حال بارگذاری...' : 'Uploading...'
+                  : language === 'fa' ? 'ثبت و بارگذاری پروژه' : 'Save Project & Upload ZIP'}
               </button>
             </div>
           </form>
@@ -383,8 +471,8 @@ export const NewItemModal: React.FC = () => {
 
             <p className="text-[11px] leading-relaxed text-slate-400">
               {language === 'fa'
-                ? 'محتوای فایل برای تولید عنوان و توضیحات به Gemini ارسال و نسخه اصلی در فضای ذخیره‌سازی ابری نگهداری می‌شود.'
-                : 'The file is sent to Gemini for a title and summary; the original is stored in cloud storage.'}
+                ? 'محتوای فایل برای تولید عنوان و توضیحات به OpenAI ارسال و نسخه اصلی در فضای ذخیره‌سازی ابری نگهداری می‌شود.'
+                : 'The file is sent to OpenAI for a title and summary; the original is stored in cloud storage.'}
             </p>
             {documentAnalysisError && (
               <p role="alert" className="rounded-md border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-rose-300">
